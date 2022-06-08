@@ -1,0 +1,94 @@
+---
+- name: Install and configure UrBackup-Server
+  hosts: ur_server
+
+  tasks:
+  - name: Update system
+    yum: name=* state=latest
+    
+  - name: Install Wget
+    yum: name=wget state=latest
+     
+  - name: Get repository of UrBackup
+    get_url:
+      url: "https://download.opensuse.org/repositories/home:uroni/CentOS_7/home:uroni.repo"
+      dest: /etc/yum.repos.d/uroni.repo
+
+  - name: Install UrBackup
+    yum: name=urbackup-server state=latest
+    notify: Enable UrBackup
+   
+  - name: Open UrBackup ports
+    firewalld:
+      port: "{{ item }}"55413/tcp
+      permanent: true
+      immediate: yes
+      state: enabled
+
+    loop:
+      - 55413/tcp
+      - 55414/tcp
+      - 55415/tcp
+
+    notify: Restart Firewall
+
+  - name: Create Backup directory
+    file:
+      path: /mnt/backups/urbackup
+      state: directory
+      owner: urbackup
+      group: urbackup
+      mode: '0755'
+
+#  handlers:
+#  - name: Restart Firewall
+#    service: name=firewalld state=restarted
+
+#  - name: Restart UrBackup
+#    service: name=urbackup-server state=restarted
+
+- name: Install and configure UrBackup-Client
+  hosts: ur_client
+
+  tasks:
+  - name: Update System
+    yum: name=* state=latest
+ 
+  - name: Install Wget
+    yum: name=wget state=latest
+
+  - name: Open UrBackup Client Ports
+    firewalld:
+      port: "{{ item }}"
+      permanent: true
+      immediate: yes
+      state: enabled
+    
+    loop:
+      - 35621/tcp
+      - 35622/udp
+      - 35623/tcp
+
+    notify: Restart Firewall
+
+  - name: Download script to install client
+    get_url:
+      url: "https://hndl.urbackup.org/Client/2.4.11/UrBackup%20Client%20Linux%202.4.11.sh"
+      dest: /root/urbackup.sh
+
+  - name: Execute bash script
+    shell: sh /root/urbackup.sh
+
+  - name: Remove script
+    file:
+      path: /root/urbackup.sh
+      state: absent
+
+  - name: Execute a command
+    command: urbackupclientctl add-backupdir -x -f -d /etc
+
+  handlers:
+  - name: Restart Firewall
+    service: name=firewalld state=restarted
+  - name: Enable UrBackup
+    service: name=urbackup-server state=started enabled=yes

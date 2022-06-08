@@ -1,0 +1,12 @@
+[ur_server]
+urbackup_server1    ansible_host=192.168.122.200
+
+[ur_client]
+urbackup_slave01    ansible_host=192.168.122.201
+urbackup_slave02    ansible_host=192.168.122.202
+urbackup_slave03    ansible_host=192.168.122.203
+urbackup_slave04    ansible_host=192.168.122.204
+
+[ur_backup:children]
+ur_server
+ur_client
